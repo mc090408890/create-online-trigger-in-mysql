@@ -9,12 +9,13 @@ try {
     $stmt = $pdo->prepare("SHOW TABLES");
     $stmt->execute();
     $tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
-
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+	$randomString=generateRandomString(2);
+    
+	if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Handle form submission
         $selectedTable = $_POST['table'];
         $selectedColumns = $_POST['columns'];
-        $triggerType = str_replace(' ', '_', $_POST['trigger_type']); // Replace spaces with underscores for trigger name
+        $triggerType = str_replace(' ', '_', $_POST['trigger_type']).'_'.strtolower($randomString); // Replace spaces with underscores for trigger name
         $triggerTypeC = $_POST['trigger_type']; // Actual trigger type (INSERT, UPDATE, DELETE)
         
         // Prepare JSON structure for old and new values
@@ -48,6 +49,7 @@ try {
         $stmt->execute();
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         $table_idFk = 'OLD.' . $result['Column_name'];
+		
 
         // Define the trigger SQL for direct MySQL execution with the IF condition
         $triggerSQL = "CREATE TRIGGER {$triggerType}_{$selectedTable} 
@@ -126,6 +128,20 @@ try {
 } catch (PDOException $e) {
     echo "Error: " . $e->getMessage();
 }
+
+function generateRandomString($length = 4) {
+    $characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    $charactersLength = strlen($characters);
+
+    $randomString = '';
+    for ($i = 0; $i < $length; $i++) {
+        $randomString .= $characters[rand(0, $charactersLength - 1)];
+    }
+    return $randomString;
+
+}
+
+
 ?>
 
 
