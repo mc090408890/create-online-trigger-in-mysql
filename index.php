@@ -101,6 +101,14 @@ try {
             <button class='btn btn-primary mt-2' onclick='copyToClipboard(\"createTableSQL\")'>Copy Create Table SQL</button>
         </div>
         
+		  <footer class='text-muted'>
+            <div style='position: fixed; bottom: 10px; right: 10px;'>
+				
+                <small>Created by: Mian Anjum<br>Email: miananjum20@gmail.com<br>
+				Git Hub Link: <a href='https://github.com/mc090408890/create-online-trigger-in-mysql'>Git Hub</a></small>
+            </div>
+        </footer>
+		
         <script>
             function copyToClipboard(elementId) {
                 var copyText = document.getElementById(elementId);
