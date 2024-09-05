@@ -1,8 +1,6 @@
 <?php
-$host = 'localhost';
-$dbname = 'database'; // Replace with your database name
-$username = 'root'; // Replace with your DB username
-$password = ''; // Replace with your DB password
+
+include_once('dbcon.php');
 
 $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);

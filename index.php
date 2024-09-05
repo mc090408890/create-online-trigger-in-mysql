@@ -1,10 +1,5 @@
 <?php
-// Database connection
-$host = 'localhost';
-$dbname = 'your_database'; // Replace with your database name
-$username = 'root'; // Replace with your DB username
-$password = ''; // Replace with your DB password
-
+include_once('dbcon.php');
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
