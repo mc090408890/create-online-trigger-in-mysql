@@ -4,29 +4,19 @@ include_once('dbcon.php');
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    
+
     // Fetch the list of all tables
     $stmt = $pdo->prepare("SHOW TABLES");
     $stmt->execute();
     $tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
-	
-	
-	
-	
-	// Fetch the list of all tables
-$stmt = $pdo->prepare("SHOW TABLES");
-$stmt->execute();
-$tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-	
-	
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Handle form submission
         $selectedTable = $_POST['table'];
         $selectedColumns = $_POST['columns'];
         $triggerType = str_replace(' ', '_', $_POST['trigger_type']); // Replace spaces with underscores for trigger name
-        $triggerTypeC = $_POST['trigger_type']; // Replace spaces with underscores for trigger name
-
+        $triggerTypeC = $_POST['trigger_type']; // Actual trigger type (INSERT, UPDATE, DELETE)
+        
         // Prepare JSON structure for old and new values
         $json_old_values = [];
         $json_new_values = [];
@@ -51,49 +41,49 @@ $tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
         // Join the JSON structure
         $old_value_json = "CONCAT('{', " . implode(", ',', ", $json_old_values) . ", '}')";
         $new_value_json = "CONCAT('{', " . implode(", ',', ", $json_new_values) . ", '}')";
-		
-			// Get the primary key of same table we will user as idFk
-			
-			 $query = "SHOW INDEXES FROM $selectedTable WHERE Key_name = 'PRIMARY'";
-			$stmt = $pdo->prepare($query);
-			$stmt->execute();
-			$result = $stmt->fetch(PDO::FETCH_ASSOC);
-			$table_idFk='OLD.'.$result['Column_name'];
-			//$randomString=generateRandomString();
-			$randomString='';
-        // Define the trigger SQL for direct MySQL execution
-        $triggerSQL = "CREATE TRIGGER {$triggerType}_{$randomString}_{$selectedTable} 
-                         {$triggerTypeC}  ON  {$selectedTable} 
-                       FOR EACH ROW 
-                       BEGIN 
-                         INSERT INTO audit_log (table_idFk,table_name,old_value, new_value, changed_at)
-            VALUES ($table_idFk,'$selectedTable',$old_value_json, $new_value_json, NOW());
-                       END;";
-					   
-					   
 
-        // Define the trigger SQL for phpMyAdmin with DELIMITER $$ syntax
+        // Get the primary key of the selected table (used as idFk)
+        $query = "SHOW INDEXES FROM $selectedTable WHERE Key_name = 'PRIMARY'";
+        $stmt = $pdo->prepare($query);
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        $table_idFk = 'OLD.' . $result['Column_name'];
+
+        // Define the trigger SQL for direct MySQL execution with the IF condition
+        $triggerSQL = "CREATE TRIGGER {$triggerType}_{$selectedTable} 
+                        {$triggerTypeC} ON {$selectedTable} 
+                        FOR EACH ROW 
+                        BEGIN 
+                            IF ($old_value_json != $new_value_json) THEN
+                                INSERT INTO audit_log (table_idFk, table_name, old_value, new_value, changed_at)
+                                VALUES ($table_idFk, '$selectedTable', $old_value_json, $new_value_json, NOW());
+                            END IF;
+                        END;";
+
+        // Define the trigger SQL for phpMyAdmin with DELIMITER $$ syntax and IF condition
         $phpMyAdminTriggerSQL = "
         DELIMITER $$
-        CREATE TRIGGER {$triggerType}_{$randomString}_{$selectedTable}
-          {$triggerTypeC}  ON  {$selectedTable}
+        CREATE TRIGGER {$triggerType}_{$selectedTable}
+        {$triggerTypeC} ON {$selectedTable}
         FOR EACH ROW 
         BEGIN
-            INSERT INTO audit_log (table_idFk,table_name,old_value, new_value, changed_at)
-            VALUES ($table_idFk,'$selectedTable',$old_value_json, $new_value_json, NOW());
+            IF ($old_value_json != $new_value_json) THEN
+                INSERT INTO audit_log (table_idFk, table_name, old_value, new_value, changed_at)
+                VALUES ($table_idFk, '$selectedTable', $old_value_json, $new_value_json, NOW());
+            END IF;
         END$$
         DELIMITER ;";
 
         // Define the CREATE TABLE SQL for the audit_log table
         $createAuditTableSQL = "
-			  CREATE TABLE IF NOT EXISTS audit_log (
-			id INT AUTO_INCREMENT PRIMARY KEY,
-			table_name VARCHAR(255),
-			table_idFk INT,
-			old_value JSON,
-			new_value JSON,
-			changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-		);";
+        CREATE TABLE IF NOT EXISTS audit_log (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            table_name VARCHAR(255),
+            table_idFk INT,
+            old_value JSON,
+            new_value JSON,
+            changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );";
 
         // Output all SQL sections in text areas with copy buttons
         echo "
@@ -128,24 +118,8 @@ $tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
 } catch (PDOException $e) {
     echo "Error: " . $e->getMessage();
 }
-
-
-
-function generateRandomString($length = 4) {
-    $characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    $charactersLength = strlen($characters);
-
-    $randomString = '';
-    for ($i = 0; $i < $length; $i++) {
-        $randomString .= $characters[rand(0, $charactersLength - 1)];
-    }
-    return $randomString;
-
-}
-
-
-
 ?>
+
 
 <!DOCTYPE html>
 <html>
