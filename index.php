@@ -9,12 +9,23 @@ try {
     $stmt = $pdo->prepare("SHOW TABLES");
     $stmt->execute();
     $tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
+	
+	
+	
+	
+	// Fetch the list of all tables
+$stmt = $pdo->prepare("SHOW TABLES");
+$stmt->execute();
+$tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
+	
+	
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Handle form submission
         $selectedTable = $_POST['table'];
         $selectedColumns = $_POST['columns'];
         $triggerType = str_replace(' ', '_', $_POST['trigger_type']); // Replace spaces with underscores for trigger name
+        $triggerTypeC = $_POST['trigger_type']; // Replace spaces with underscores for trigger name
 
         // Prepare JSON structure for old and new values
         $json_old_values = [];
@@ -40,36 +51,48 @@ try {
         // Join the JSON structure
         $old_value_json = "CONCAT('{', " . implode(", ',', ", $json_old_values) . ", '}')";
         $new_value_json = "CONCAT('{', " . implode(", ',', ", $json_new_values) . ", '}')";
-
+		
+			// Get the primary key of same table we will user as idFk
+			
+			 $query = "SHOW INDEXES FROM $selectedTable WHERE Key_name = 'PRIMARY'";
+			$stmt = $pdo->prepare($query);
+			$stmt->execute();
+			$result = $stmt->fetch(PDO::FETCH_ASSOC);
+			$table_idFk=$result['Column_name'];
+		
         // Define the trigger SQL for direct MySQL execution
         $triggerSQL = "CREATE TRIGGER {$triggerType}_{$selectedTable} 
-                       {$triggerType} ON {$selectedTable} 
+                         {$triggerTypeC}  ON  {$selectedTable} 
                        FOR EACH ROW 
                        BEGIN 
-                           INSERT INTO audit_log (old_value, new_value, changed_at) 
-                           VALUES ($old_value_json, $new_value_json, NOW()); 
+                         INSERT INTO audit_log (table_idFk,table_name,old_value, new_value, changed_at)
+            VALUES ($table_idFk,$selectedTable,$old_value_json, $new_value_json, NOW());
                        END;";
+					   
+					   
 
         // Define the trigger SQL for phpMyAdmin with DELIMITER $$ syntax
         $phpMyAdminTriggerSQL = "
         DELIMITER $$
         CREATE TRIGGER {$triggerType}_{$selectedTable}
-        {$triggerType} ON {$selectedTable}
+          {$triggerTypeC}  ON  {$selectedTable}
         FOR EACH ROW 
         BEGIN
-            INSERT INTO audit_log (old_value, new_value, changed_at)
-            VALUES ($old_value_json, $new_value_json, NOW());
+            INSERT INTO audit_log (table_idFk,table_name,old_value, new_value, changed_at)
+            VALUES ($table_idFk,$selectedTable,$old_value_json, $new_value_json, NOW());
         END$$
         DELIMITER ;";
 
         // Define the CREATE TABLE SQL for the audit_log table
         $createAuditTableSQL = "
-        CREATE TABLE IF NOT EXISTS audit_log (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            old_value JSON,
-            new_value JSON,
-            changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );";
+			  CREATE TABLE IF NOT EXISTS audit_log (
+			id INT AUTO_INCREMENT PRIMARY KEY,
+			table_name VARCHAR(255),
+			table_id_fk INT,
+			old_value JSON,
+			new_value JSON,
+			changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);";
 
         // Output all SQL sections in text areas with copy buttons
         echo "
