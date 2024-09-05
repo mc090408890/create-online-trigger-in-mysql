@@ -1,6 +1,6 @@
 <?php
 $host = 'localhost';
-$dbname = 'pitb_stdc'; // Replace with your database name
+$dbname = 'database'; // Replace with your database name
 $username = 'root'; // Replace with your DB username
 $password = ''; // Replace with your DB password
 
