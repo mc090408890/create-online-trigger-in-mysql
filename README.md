@@ -1,3 +1,5 @@
+A package to create MySQL triggers with audit logging
+
 If you want to create a MySQL trigger based on any changes to a specific column, want to maintain log in audit table  this script will generate a helpful script for you.
 
 Action:
