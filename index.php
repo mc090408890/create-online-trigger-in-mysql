@@ -114,7 +114,7 @@ try {
             <h4>Direct MySQL Trigger:</h4>
             <textarea id='mysqlTrigger' class='form-control' rows='6'>{$triggerSQL}</textarea>
             <button class='btn btn-primary mt-2' onclick='copyToClipboard(\"mysqlTrigger\")'>Copy MySQL Trigger</button>
-			<button class='btn btn-primary mt-2' onclick=''>Run MySQL Trigger</button>
+			
             <h4 class='mt-4'>phpMyAdmin-Compatible Trigger:</h4>
             <textarea id='phpMyAdminTrigger' class='form-control' rows='6'>{$phpMyAdminTriggerSQL}</textarea>
             <button class='btn btn-primary mt-2' onclick='copyToClipboard(\"phpMyAdminTrigger\")'>Copy phpMyAdmin Trigger</button>
