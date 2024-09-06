@@ -1,6 +1,11 @@
 <?php
 include_once('dbcon.php');
 
+ini_set('display_errors', '0');
+ini_set('display_startup_errors', '1');
+error_reporting(E_ALL);
+
+
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -38,6 +43,17 @@ try {
                 $json_new_values[] = "'\"$column\":\"', NEW.$column, '\"'";
             }
         }
+			
+			
+			// Prepare and execute the query
+		$sql = "SELECT TRIGGER_NAME, EVENT_MANIPULATION, ACTION_STATEMENT, ACTION_TIMING 
+				FROM information_schema.TRIGGERS 
+				WHERE EVENT_OBJECT_TABLE = :tableName AND TRIGGER_SCHEMA = :databaseName";
+
+		$stmt = $pdo->prepare($sql);
+		$stmt->execute(['tableName' => $selectedTable, 'databaseName' => $dbname]);
+		// Fetch the triggers
+		$triggers_result = $stmt->fetchAll();
 
         // Join the JSON structure
         $old_value_json = "CONCAT('{', " . implode(", ',', ", $json_old_values) . ", '}')";
@@ -86,14 +102,19 @@ try {
             new_value JSON,
             changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );";
+		
+		
+		
+	
 
+				
         // Output all SQL sections in text areas with copy buttons
-        echo "
+        $triggers.= "
         <div class='container'>
             <h4>Direct MySQL Trigger:</h4>
             <textarea id='mysqlTrigger' class='form-control' rows='6'>{$triggerSQL}</textarea>
             <button class='btn btn-primary mt-2' onclick='copyToClipboard(\"mysqlTrigger\")'>Copy MySQL Trigger</button>
-
+			<button class='btn btn-primary mt-2' onclick=''>Run MySQL Trigger</button>
             <h4 class='mt-4'>phpMyAdmin-Compatible Trigger:</h4>
             <textarea id='phpMyAdminTrigger' class='form-control' rows='6'>{$phpMyAdminTriggerSQL}</textarea>
             <button class='btn btn-primary mt-2' onclick='copyToClipboard(\"phpMyAdminTrigger\")'>Copy phpMyAdmin Trigger</button>
@@ -101,8 +122,47 @@ try {
             <h4 class='mt-4'>Create Table for audit_log:</h4>
             <textarea id='createTableSQL' class='form-control' rows='4'>{$createAuditTableSQL}</textarea>
             <button class='btn btn-primary mt-2' onclick='copyToClipboard(\"createTableSQL\")'>Copy Create Table SQL</button>
-        </div>
-        
+        </div>";
+		
+			
+			
+			
+			if (isset($triggers_result) && count($triggers_result)>0) {
+			$triggers_history="";
+			$triggers_history.= "<table border='0'  cellpadding='10' cellspacing='0'>";
+			$triggers_history.= "<thead>
+					<tr>
+						<th> No #</th>
+						<th> Existing Trigger Name</th>
+						<th>Event</th>
+						<th>Statment</th>
+					
+						<th>Timing</th>
+					</tr>
+				  </thead>";
+			$triggers_history.= "<tbody>";
+			 $i=0;
+			foreach ($triggers_result as $trigger) {
+				$i++;
+				
+				$triggers_history.= "<tr>";
+				$triggers_history.= "<td>" . $i . "</td>";
+				$triggers_history.= "<td>" . htmlspecialchars($trigger['TRIGGER_NAME']) . "</td>";
+				$triggers_history.= "<td>" . htmlspecialchars($trigger['EVENT_MANIPULATION']) . "</td>";
+				$triggers_history.= "<td>" . htmlspecialchars($trigger['ACTION_STATEMENT']) . "</td>";
+				
+				$triggers_history.= "<td>" . htmlspecialchars($trigger['ACTION_TIMING']) . "</td>";
+				$triggers_history.= "</tr>";
+			}
+			
+			$triggers_history.= "</tbody>";
+			$triggers_history.= "</table>";
+		} 
+
+		$triggers_history.= "";
+		
+		
+        $triggers.= "
 		  <footer class='text-muted'>
             <div style='position: fixed; bottom: 10px; right: 10px;'>
 				
@@ -120,8 +180,9 @@ try {
                 alert('Copied the text from ' + elementId);
             }
         </script>
-        <link href='https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css' rel='stylesheet'>
-        ";
+       ";
+		echo $triggers;
+		echo $triggers_history;
         exit();
     }
 
@@ -233,6 +294,5 @@ function generateRandomString($length = 4) {
     </script>
 
     <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
